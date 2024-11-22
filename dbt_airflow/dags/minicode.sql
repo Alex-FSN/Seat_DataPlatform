@@ -87,3 +87,7 @@ insert into PRO_BRONZE_DB.{schema}.{nametable} (
 
 --@remove_taux_table
 drop table PRO_BRONZE_DB.{schema}.{taux_nametable};
+
+--@add_insertdate
+ALTER TABLE PRO_BRONZE_DB.{schema}.{nametable}
+ADD COLUMN INSERT_DATE_UTC TIMESTAMP_NTZ(9)

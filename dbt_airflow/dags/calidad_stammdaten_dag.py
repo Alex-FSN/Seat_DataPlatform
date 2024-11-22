@@ -237,6 +237,17 @@ SQ_SLT_VMODELL_job = PythonOperator(
     dag=dag,
 )
 
+SQ_SLT_WERK_job = PythonOperator(
+    task_id="SQ_SLT_WERK",
+    python_callable=task_main,
+    op_kwargs={
+        "Schema": "STAMMDATEN",
+        "Tabla": "SQ_SLT_WERK",
+    },  # Pass additional variables as keyword arguments
+    provide_context=True,
+    dag=dag,
+)
+
 
 dag_delete_folder = PythonOperator(
     task_id="delete_folder",
@@ -251,6 +262,7 @@ dummy_task_end = DummyOperator(
 )  # Set execution timeout)
 
 (
+
     dummy_task_start
     >> [
         SQ_SLT_KEFA_FEHLEROBJEKT_job,
@@ -270,7 +282,9 @@ dummy_task_end = DummyOperator(
         SQ_SLT_PARTNER_job,
         SQ_SLT_PRNR_job,
         SQ_SLT_VMODELL_job,
+        SQ_SLT_WERK_job
     ]
     >> dag_delete_folder
     >> dummy_task_end
+
 )

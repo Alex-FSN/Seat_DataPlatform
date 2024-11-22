@@ -13,7 +13,7 @@ def execute_query_by_name(query_name, params, conn, sqlfile):
                 break
         else:
             raise ValueError("No se encontró la consulta especificada en el archivo")
-
+ 
     # executa la query que se manda
     consulta_formateada = consulta_sql.format(**params)
     print(consulta_formateada)

@@ -18,9 +18,7 @@ load_dotenv()
 # Desactivar las advertencias de verificación de SSL
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-
 dbt_project_path = "/usr/local/airflow/dags/"
-
 
 def delete_folder(schema):
     if os.path.isdir(dbt_project_path + schema):
@@ -133,6 +131,7 @@ def insert_to_snowflake(tabla, file_path, schema, engine, firsload):
     # execute_query_by_name('createformat',arguments,engine)
     if firsload == 1:
         execute_query_by_name("createtable", arguments, engine, "minicode.sql")
+        execute_query_by_name("add_insertdate", arguments, engine, "minicode.sql")
 
     execute_query_by_name("createtabletaux", arguments, engine, "minicode.sql")
 
@@ -168,13 +167,16 @@ def func(schema, tabla, year, month):
     acces_key = os.getenv("acces_key")
     secret_key = os.getenv("secret_key")
     minio_url = os.getenv("minio_url")
+
+    acces_key = "EsqaS3OZCSEAT"
+    secret_key = "bxe3ymy_pwq1CHP7fbm"
+    minio_url = "storage-ui.esqa.dapc.ocp.vwgroup.com:443"
     hostname = minio_url
 
     # procerso principal para la transformaciond de parquet a pandas para escribir hacía snowflake
-
     if not acces_key or not secret_key or not minio_url:
         raise ValueError(
-            "Una o más variables de entorno no están configuradas correctamente"
+            "Error al leer access_key o secret_key de acceso a minio"
         )
 
     # conexion con minIO
@@ -183,7 +185,7 @@ def func(schema, tabla, year, month):
         print(f"The IP address   {hostname} is {ip_address}")
     except socket.gaierror as e:
         print(f"Error: {e.strerror}")
-
+   
     httpclient = urllib3.PoolManager(
         timeout=urllib3.Timeout(connect=10.0, read=10.0),
         cert_reqs="CERT_NONE",
@@ -192,13 +194,14 @@ def func(schema, tabla, year, month):
             total=5, backoff_factor=0.2, status_forcelist=[500, 502, 503, 504]
         ),
     )
+    
     """httpclient2 = urllib3.ProxyManager(
                     'https://proxy_host.sampledomain.com:8119/',
                     cert_reqs='CERT_NONE',
                     ca_certs='CA-Bundle.crt',
                     timeout=urllib3.Timeout(connect=10.0, read=10.0)
                 )"""
-
+    '''
     client = Minio(
         minio_url,
         access_key=acces_key,
@@ -206,7 +209,15 @@ def func(schema, tabla, year, month):
         secure=True,
         http_client=httpclient,
     )
-
+    '''
+    
+    client = Minio("storage.esqa.dapc.ocp.vwgroup.com", 
+        access_key="EsqaS3OZCSEAT",
+        secret_key="bxe3ymy_pwq1CHP7fbm",
+        secure=True,
+        http_client=httpclient
+    )
+    
     bucket_name = "sqa-sz-storage"
     # definicion del schema hacia donde se va escribir
     prefix = schema
@@ -224,20 +235,22 @@ def func(schema, tabla, year, month):
         else:
             objects = client.list_objects(
                 bucket_name,
-                prefix=prefix + "/" + tabla + "/DAPC_YEAR=" + str(year),
-                # + "/DAPC_MONTH="
-                # + str(month),   descomentar si se quiere hacer carga por año y mes
+                prefix=prefix + "/" + tabla + "/DAPC_YEAR=" + str(year)
+                + "/DAPC_MONTH=" + str(month),   
                 recursive=recursive,
             )
+        #comentar / descomentar  "/DAPC_MONTH=" + str(month) linea anterior para cgargas por mes o año y mes 
 
         engine = snowflake_con("your_schema")
-
+        
         filestart = schema + "/" + tabla
 
         parametros = {"schema": schema, "nametable": tabla}
         execute_query_by_name("defaultdatabase", parametros, engine, "minicode.sql")
+
         # execute_query_by_name('createschema', parametros,engine)
         execute_query_by_name("createcontrol", parametros, engine, "minicode.sql")
+
         # execute_query_by_name('createformat', parametros,engine)
         # Primera carga all datat
         if (
@@ -255,7 +268,7 @@ def func(schema, tabla, year, month):
                         or (
                             (obj.object_name).startswith(filestart + "/DAPC_YEAR")
                             and devolver_year(name) == year
-                            # and devolver_mes(name) == month  descomentar si se quiere hacer carga por año y mes
+                            and devolver_mes(name) == month  #descomentar si se quiere hacer carga por año y mes
                         )
                     )
                     and not (obj.object_name).endswith("checkpoint.parquet")
@@ -277,7 +290,7 @@ def func(schema, tabla, year, month):
                         or (
                             (obj.object_name).startswith(filestart + "/DAPC_YEAR")
                             and devolver_year(name) == year
-                            # and devolver_mes(name) == month  escomentar si se quiere hacer carga por año y mes
+                            and devolver_mes(name) == month  #comentar / descomentar si se quiere hacer carga por año y mes
                         )
                     )
                     and not (obj.object_name).endswith("checkpoint.parquet")

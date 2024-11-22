@@ -5,7 +5,6 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
 from miniocode import func, delete_folder
 
-
 # Define the DAG function a set of parameters
 default_args = {
     "owner": "airflow",
