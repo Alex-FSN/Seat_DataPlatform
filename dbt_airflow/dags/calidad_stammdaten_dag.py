@@ -21,7 +21,7 @@ dag = DAG(
     dag_id="calidad_STAMMDATEN_dag",
     default_args=default_args,  # Include default_args here
     start_date=datetime(2024, 1, 1),
-    schedule_interval="@daily",
+    schedule_interval="0 6 * * *",
     catchup=False,
 )
 
