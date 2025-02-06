@@ -32,7 +32,6 @@ CREATE TABLE IF NOT EXISTS  PRO_BRONZE_DB.{schema}.{nametable}
         )
       ));
 
-
 --@createtabletaux
 CREATE TABLE IF NOT EXISTS  PRO_BRONZE_DB.{schema}.{taux_nametable} LIKE PRO_BRONZE_DB.{schema}.{nametable};
 
@@ -41,15 +40,12 @@ CREATE FILE FORMAT IF NOT EXISTS  PRO_BRONZE_DB.{schema}.my_parquet_format
   TYPE = 'PARQUET'
   COMPRESSION = 'SNAPPY';
 
-
 --@copytotable
 COPY INTO PRO_BRONZE_DB.{schema}.{taux_nametable}
 FROM @{stage_name}/{name_parquet}
 FILE_FORMAT = (TYPE = 'PARQUET')
 MATCH_BY_COLUMN_NAME = CASE_SENSITIVE
 ON_ERROR = 'CONTINUE';
-
-
 
 --@removestage
 REMOVE @{stage_name}/{name};

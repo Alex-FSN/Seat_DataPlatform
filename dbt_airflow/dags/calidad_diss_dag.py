@@ -21,7 +21,8 @@ dag = DAG(
     dag_id="calidad_diss_dag",
     default_args=default_args,  # Include default_args here
     start_date=datetime(2024, 1, 1),
-    schedule_interval="@daily",
+    #schedule_interval="@daily",
+    schedule_interval="0 6 * * *",
     catchup=False,
 )
 
@@ -49,8 +50,8 @@ DI_SLT_ANFRAGE_job = PythonOperator(
     op_kwargs={
         "Schema": "DISS",
         "Tabla": "DI_SLT_ANFRAGE",
-        "year": 2024,
-        "month": 11,
+        "year": 2025,
+        "month": 1,
     },  # Pass additional variables as keyword arguments
     provide_context=True,
     dag=dag,
@@ -62,8 +63,8 @@ DI_SLT_BEANSTANDUNG_job = PythonOperator(
     op_kwargs={
         "Schema": "DISS",
         "Tabla": "DI_SLT_BEANSTANDUNG",
-        "year": 2024,
-        "month": 11,
+        "year": 2025,
+        "month": 1,
     },  # Pass additional variables as keyword arguments
     provide_context=True,
     dag=dag,
@@ -75,8 +76,8 @@ DI_SLT_BILDPOSITION_job = PythonOperator(
     op_kwargs={
         "Schema": "DISS",
         "Tabla": "DI_SLT_BILDPOSITION",
-        "year": 2024,
-        "month": 11,
+        "year": 2025,
+        "month": 1,
     },  # Pass additional variables as keyword arguments
     provide_context=True,
     dag=dag,
@@ -88,8 +89,8 @@ DI_SLT_NACHRICHT_job = PythonOperator(
     op_kwargs={
         "Schema": "DISS",
         "Tabla": "DI_SLT_NACHRICHT",
-        "year": 2024,
-        "month": 11,
+        "year": 2025,
+        "month": 1,
     },  # Pass additional variables as keyword arguments
     provide_context=True,
     dag=dag,
@@ -101,8 +102,8 @@ DI_SLT_RANDBEDINGUNG_job = PythonOperator(
     op_kwargs={
         "Schema": "DISS",
         "Tabla": "DI_SLT_RANDBEDINGUNG",
-        "year": 2024,
-        "month": 11,
+        "year": 2025,
+        "month": 1,
     },  # Pass additional variables as keyword arguments
     provide_context=True,
     dag=dag,

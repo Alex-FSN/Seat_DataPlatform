@@ -3,8 +3,7 @@ from pendulum import datetime
 from datetime import timedelta
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
-from miniocode import func, delete_folder
-
+from miniocode import func, delete_folder, func_hist
 
 # Define the DAG function a set of parameters
 default_args = {
@@ -18,10 +17,10 @@ default_args = {
 
 # Define the DAG
 dag = DAG(
-    dag_id="calidad_saga_dag",
+    dag_id="calidad_carpot_dag_hist",
     default_args=default_args,  # Include default_args here
     start_date=datetime(2024, 1, 1),
-    schedule_interval="0 6 * * *",
+    schedule_interval="@daily",
     catchup=False,
 )
 
@@ -40,31 +39,54 @@ def folder_delete(**kwargs):
 
 
 dummy_task_start = DummyOperator(
-    task_id="start", retries=3, execution_timeout=timedelta(minutes=10)
+    task_id="start", retries=3, execution_timeout=timedelta(minutes=1)
 )  # Set execution timeout)
 
-
-SA_SLT_ANTRSCHADEN_job = PythonOperator(
-    task_id="SA_SLT_ANTRSCHADEN",
+CA_SLT_FAHRZEUG_JOB = PythonOperator(
+    task_id="CA_SLT_FAHRZEUG",
     python_callable=task_main,
     op_kwargs={
-        "Schema": "SAGA",
-        "Tabla": "SA_SLT_ANTRSCHADEN",
-        "year": 2025,
-        "month": 1,
+        "Schema": "CARPORT",
+        "Tabla": "CA_SLT_FAHRZEUG",
+        "year": 2024,
+        "month": 2,
     },  # Pass additional variables as keyword arguments
     provide_context=True,
     dag=dag,
 )
 
-SA_SLT_ANTRSCHADEN_APETFLFM_job = PythonOperator(
-    task_id="SA_SLT_ANTRSCHADEN_APETFLFM",
+CA_SLT_FAHRZEUG_FILTER_JOB = PythonOperator(
+    task_id="CA_SLT_FAHRZEUG_FILTER",
     python_callable=task_main,
     op_kwargs={
-        "Schema": "SAGA",
-        "Tabla": "SA_SLT_ANTRSCHADEN_APETFLFM",
-        "year": 2025,
-        "month": 1,
+        "Schema": "CARPORT",
+        "Tabla": "CA_SLT_FAHRZEUG_FILTER",
+    },  # Pass additional variables as keyword arguments
+    provide_context=True,
+    dag=dag,
+)
+
+CA_SLT_FAHRZEUG_PRNR_JOB = PythonOperator(
+    task_id="CA_SLT_FAHRZEUG_PRNR",
+    python_callable=task_main,
+    op_kwargs={
+        "Schema": "CARPORT",
+        "Tabla": "CA_SLT_FAHRZEUG_PRNR",
+        "year": 2024,
+        "month": 2,
+    },  # Pass additional variables as keyword arguments
+    provide_context=True,
+    dag=dag,
+)
+
+CA_SLT_FAHRZEUG_PRNR_STRING_JOB = PythonOperator(
+    task_id="CA_SLT_FAHRZEUG_PRNR_STRING",
+    python_callable=task_main,
+    op_kwargs={
+        "Schema": "CARPORT",
+        "Tabla": "CA_SLT_FAHRZEUG_PRNR_STRING",
+        "year": 2024,
+        "month": 2,
     },  # Pass additional variables as keyword arguments
     provide_context=True,
     dag=dag,
@@ -72,19 +94,25 @@ SA_SLT_ANTRSCHADEN_APETFLFM_job = PythonOperator(
 
 dag_delete_folder = PythonOperator(
     task_id="delete_folder",
-    op_kwargs={"Schema": "SAGA"},
+    op_kwargs={"Schema": "CARPORT"},
     provide_context=True,
     python_callable=folder_delete,
     dag=dag,
 )
 
 dummy_task_end = DummyOperator(
-    task_id="end", retries=3, execution_timeout=timedelta(minutes=10)
+    task_id="end", retries=3, execution_timeout=timedelta(minutes=1)
 )  # Set execution timeout)
 
 (
     dummy_task_start
-    >> [SA_SLT_ANTRSCHADEN_job, SA_SLT_ANTRSCHADEN_APETFLFM_job]
+    >> [
+        CA_SLT_FAHRZEUG_JOB,
+        CA_SLT_FAHRZEUG_FILTER_JOB,
+        CA_SLT_FAHRZEUG_PRNR_JOB,
+        CA_SLT_FAHRZEUG_PRNR_STRING_JOB,
+    ]
     >> dag_delete_folder
     >> dummy_task_end
 )
+

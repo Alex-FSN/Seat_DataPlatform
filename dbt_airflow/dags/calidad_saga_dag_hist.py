@@ -3,7 +3,7 @@ from pendulum import datetime
 from datetime import timedelta
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
-from miniocode import func, delete_folder
+from miniocode import func, delete_folder, func_hist
 
 
 # Define the DAG function a set of parameters
@@ -18,10 +18,10 @@ default_args = {
 
 # Define the DAG
 dag = DAG(
-    dag_id="calidad_saga_dag",
+    dag_id="calidad_saga_dag_hist",
     default_args=default_args,  # Include default_args here
     start_date=datetime(2024, 1, 1),
-    schedule_interval="0 6 * * *",
+    schedule_interval="@daily",
     catchup=False,
 )
 
@@ -31,7 +31,7 @@ def task_main(**kwargs):
     schema = kwargs.get("Schema")
     year = kwargs.get("year")
     month = kwargs.get("month")
-    func(schema, tabla, year, month)
+    func_hist(schema, tabla, year, month)
 
 
 def folder_delete(**kwargs):
@@ -50,8 +50,8 @@ SA_SLT_ANTRSCHADEN_job = PythonOperator(
     op_kwargs={
         "Schema": "SAGA",
         "Tabla": "SA_SLT_ANTRSCHADEN",
-        "year": 2025,
-        "month": 1,
+        "year": 2024,
+        "month": 11,
     },  # Pass additional variables as keyword arguments
     provide_context=True,
     dag=dag,
@@ -63,8 +63,8 @@ SA_SLT_ANTRSCHADEN_APETFLFM_job = PythonOperator(
     op_kwargs={
         "Schema": "SAGA",
         "Tabla": "SA_SLT_ANTRSCHADEN_APETFLFM",
-        "year": 2025,
-        "month": 1,
+        "year": 2024,
+        "month": 11,
     },  # Pass additional variables as keyword arguments
     provide_context=True,
     dag=dag,

@@ -3,8 +3,7 @@ from pendulum import datetime
 from datetime import timedelta
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
-from miniocode import func, delete_folder
-
+from miniocode import func, func_hist, delete_folder
 
 # Define the DAG function a set of parameters
 default_args = {
@@ -18,37 +17,60 @@ default_args = {
 
 # Define the DAG
 dag = DAG(
-    dag_id="calidad_diagnose_dag",
+    dag_id="calidad_diss_dag_hist",
     default_args=default_args,  # Include default_args here
     start_date=datetime(2024, 1, 1),
     schedule_interval="@daily",
     catchup=False,
 )
 
-
 def task_main(**kwargs):
     tabla = kwargs.get("Tabla")
     schema = kwargs.get("Schema")
     year = kwargs.get("year")
     month = kwargs.get("month")
-    func(schema, tabla, year, month)
-
+    func_hist(schema, tabla, year, month)
 
 def folder_delete(**kwargs):
     schema = kwargs.get("Schema")
     delete_folder(schema)
 
-
 dummy_task_start = DummyOperator(
     task_id="start", retries=3, execution_timeout=timedelta(minutes=1)
 )  # Set execution timeout)
 
-ODIS_SL_HD_HV_job = PythonOperator(
-    task_id="ODIS_SL_HD_HV",
+DI_SLT_ANFRAGE_job = PythonOperator(
+    task_id="DI_SLT_ANFRAGE_JOB",
     python_callable=task_main,
     op_kwargs={
-        "Schema": "DIAGNOSE",
-        "Tabla": "ODIS_SL_HD_HV",
+        "Schema": "DISS",
+        "Tabla": "DI_SLT_ANFRAGE",
+        "year": 2024,
+        "month": 12,
+    },  # Pass additional variables as keyword arguments
+    provide_context=True,
+    dag=dag,
+)
+
+DI_SLT_BEANSTANDUNG_job = PythonOperator(
+    task_id="DI_SLT_BEANSTANDUNG",
+    python_callable=task_main,
+    op_kwargs={
+        "Schema": "DISS",
+        "Tabla": "DI_SLT_BEANSTANDUNG",
+        "year": 2024,
+        "month": 12,
+    },  # Pass additional variables as keyword arguments
+    provide_context=True,
+    dag=dag,
+)
+
+DI_SLT_BILDPOSITION_job = PythonOperator(
+    task_id="DI_SLT_BILDPOSITION",
+    python_callable=task_main,
+    op_kwargs={
+        "Schema": "DISS",
+        "Tabla": "DI_SLT_BILDPOSITION",
         "year": 2024,
         "month": 11,
     },  # Pass additional variables as keyword arguments
@@ -56,12 +78,12 @@ ODIS_SL_HD_HV_job = PythonOperator(
     dag=dag,
 )
 
-DG_SLT_STEUERGERAET_job = PythonOperator(
-    task_id="DG_SLT_STEUERGERAET",
+DI_SLT_NACHRICHT_job = PythonOperator(
+    task_id="DI_SLT_NACHRICHT",
     python_callable=task_main,
     op_kwargs={
-        "Schema": "DIAGNOSE",
-        "Tabla": "DG_SLT_STEUERGERAET",
+        "Schema": "DISS",
+        "Tabla": "DI_SLT_NACHRICHT",
         "year": 2024,
         "month": 11,
     },  # Pass additional variables as keyword arguments
@@ -69,77 +91,21 @@ DG_SLT_STEUERGERAET_job = PythonOperator(
     dag=dag,
 )
 
-# LA ETL NO ESTA DEJANDO DATOS EN MINIO PARA ESTA TABKLA
-'''
-DG_SLT_PRUEFPLAN_job = PythonOperator(
-    task_id="DG_SLT_PRUEFPLAN",
+DI_SLT_RANDBEDINGUNG_job = PythonOperator(
+    task_id="DI_SLT_RANDBEDINGUNG",
     python_callable=task_main,
     op_kwargs={
-        "Schema": "DIAGNOSE",
-        "Tabla": "DG_SLT_PRUEFPLAN",
+        "Schema": "DISS",
+        "Tabla": "DI_SLT_RANDBEDINGUNG",
         "year": 2024,
         "month": 11,
     },  # Pass additional variables as keyword arguments
     provide_context=True,
     dag=dag,
 )
-'''
-
-DG_SLT_PROTOKOLL_job = PythonOperator(
-    task_id="DG_SLT_PROTOKOLL",
-    python_callable=task_main,
-    op_kwargs={
-        "Schema": "DIAGNOSE",
-        "Tabla": "DG_SLT_PROTOKOLL",
-        "year": 2024,
-        "month": 11,
-    },  # Pass additional variables as keyword arguments
-    provide_context=True,
-    dag=dag,
-)
-
-DG_SLT_GLOB_VAR_job = PythonOperator(
-    task_id="DG_SLT_GLOB_VAR",
-    python_callable=task_main,
-    op_kwargs={
-        "Schema": "DIAGNOSE",
-        "Tabla": "DG_SLT_GLOB_VAR",
-        "year": 2024,
-        "month": 11,
-    },  # Pass additional variables as keyword arguments
-    provide_context=True,
-    dag=dag,
-)
-
-DG_SLT_FEHLERSPEICHER_job = PythonOperator(
-    task_id="DG_SLT_FEHLERSPEICHER",
-    python_callable=task_main,
-    op_kwargs={
-        "Schema": "DIAGNOSE",
-        "Tabla": "DG_SLT_FEHLERSPEICHER",
-        "year": 2024,
-        "month": 11,
-    },  # Pass additional variables as keyword arguments
-    provide_context=True,
-    dag=dag,
-)
-
-DG_SLT_ERW_UMW_BEDINGUNGEN_job = PythonOperator(
-    task_id="DG_SLT_ERW_UMW_BEDINGUNGEN",
-    python_callable=task_main,
-    op_kwargs={
-        "Schema": "DIAGNOSE",
-        "Tabla": "DG_SLT_ERW_UMW_BEDINGUNGEN",
-        "year": 2024,
-        "month": 11,
-    },  # Pass additional variables as keyword arguments
-    provide_context=True,
-    dag=dag,
-)
-
 dag_delete_folder = PythonOperator(
     task_id="delete_folder",
-    op_kwargs={"Schema": "DIAGNOSE"},
+    op_kwargs={"Schema": "DISS"},
     provide_context=True,
     python_callable=folder_delete,
     dag=dag,
@@ -149,15 +115,15 @@ dummy_task_end = DummyOperator(
     task_id="end", retries=3, execution_timeout=timedelta(minutes=1)
 )  # Set execution timeout)
 
+
 (
     dummy_task_start
     >> [
-        ODIS_SL_HD_HV_job,
-        DG_SLT_STEUERGERAET_job,
-        DG_SLT_PROTOKOLL_job,
-        DG_SLT_GLOB_VAR_job,
-        DG_SLT_FEHLERSPEICHER_job,
-        DG_SLT_ERW_UMW_BEDINGUNGEN_job
+        DI_SLT_ANFRAGE_job,
+        DI_SLT_BEANSTANDUNG_job,
+        DI_SLT_BILDPOSITION_job,
+        DI_SLT_NACHRICHT_job,
+        DI_SLT_RANDBEDINGUNG_job,
     ]
     >> dag_delete_folder
     >> dummy_task_end

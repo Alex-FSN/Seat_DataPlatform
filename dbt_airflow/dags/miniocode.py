@@ -131,7 +131,7 @@ def insert_to_snowflake(tabla, file_path, schema, engine, firsload):
     # execute_query_by_name('createformat',arguments,engine)
     if firsload == 1:
         execute_query_by_name("createtable", arguments, engine, "minicode.sql")
-        execute_query_by_name("add_insertdate", arguments, engine, "minicode.sql")
+        #execute_query_by_name("add_insertdate", arguments, engine, "minicode.sql")
 
     execute_query_by_name("createtabletaux", arguments, engine, "minicode.sql")
 
@@ -147,7 +147,7 @@ def processwritesnowflake(object_name, client, bucket_name, engine, tabla, firsl
         dbt_project_path + object_name
     )  # Ruta local donde se guardará el archivo
     client.fget_object(bucket_name, object_name, file_path)
-    print(f"Archivo descargado: {object_name}")
+    print(f"EXEC: ARCHIVO DESCARGADO: {object_name}")
     # transformar parquet a dataframe
     # inserta source table control
     # insertar datos a snowflake
@@ -176,13 +176,13 @@ def func(schema, tabla, year, month):
     # procerso principal para la transformaciond de parquet a pandas para escribir hacía snowflake
     if not acces_key or not secret_key or not minio_url:
         raise ValueError(
-            "Error al leer access_key o secret_key de acceso a minio"
+            "EXEC: Error al leer access_key o secret_key de acceso a minio"
         )
 
     # conexion con minIO
     try:
         ip_address = socket.gethostbyname(hostname)
-        print(f"The IP address   {hostname} is {ip_address}")
+        print(f"EXEC: The IP address   {hostname} is {ip_address}")
     except socket.gaierror as e:
         print(f"Error: {e.strerror}")
    
@@ -242,7 +242,7 @@ def func(schema, tabla, year, month):
         #comentar / descomentar  "/DAPC_MONTH=" + str(month) linea anterior para cgargas por mes o año y mes 
 
         engine = snowflake_con("your_schema")
-        
+
         filestart = schema + "/" + tabla
 
         parametros = {"schema": schema, "nametable": tabla}
@@ -291,6 +291,136 @@ def func(schema, tabla, year, month):
                             (obj.object_name).startswith(filestart + "/DAPC_YEAR")
                             and devolver_year(name) == year
                             and devolver_mes(name) == month  #comentar / descomentar si se quiere hacer carga por año y mes
+                        )
+                    )
+                    and not (obj.object_name).endswith("checkpoint.parquet")
+                ):
+                    parametros = {"nametable": obj.object_name, "schema": schema}
+                    val = execute_query_by_name(
+                        "existeparquet", parametros, engine, "minicode.sql"
+                    )
+                    print(val)
+                    if int(val) == 0:
+                        object_name = obj.object_name
+                        processwritesnowflake(
+                            object_name, client, bucket_name, engine, tabla, 0
+                        )
+
+                    else:
+                        continue
+        engine.close()
+
+    except S3Error as e:
+        print(f"Error listing objects: {e}")
+
+def func_hist(schema, tabla, year, month):
+    acces_key = "EsqaS3OZCSEAT"
+    secret_key = "bxe3ymy_pwq1CHP7fbm"
+    minio_url = "storage-ui.esqa.dapc.ocp.vwgroup.com:443"
+    hostname = minio_url
+
+    # procerso principal para la transformaciond de parquet a pandas para escribir hacía snowflake
+    if not acces_key or not secret_key or not minio_url:
+        raise ValueError(
+            "EXEC: Error al leer access_key o secret_key de acceso a minio"
+        )
+
+    # conexion con minIO
+    try:
+        ip_address = socket.gethostbyname(hostname)
+        print(f"EXEC: The IP address   {hostname} is {ip_address}")
+    except socket.gaierror as e:
+        print(f"Error: {e.strerror}")
+   
+    httpclient = urllib3.PoolManager(
+        timeout=urllib3.Timeout(connect=10.0, read=10.0),
+        cert_reqs="CERT_NONE",
+        maxsize=5,
+        retries=Retry(
+            total=5, backoff_factor=0.2, status_forcelist=[500, 502, 503, 504]
+        ),
+    )
+    
+    client = Minio("storage.esqa.dapc.ocp.vwgroup.com", 
+        access_key="EsqaS3OZCSEAT",
+        secret_key="bxe3ymy_pwq1CHP7fbm",
+        secure=True,
+        http_client=httpclient
+    )
+    
+    bucket_name = "sqa-sz-storage"
+    # definicion del schema hacia donde se va escribir
+    prefix = schema
+    recursive = True
+    # procese de descarga de los parquet y su tratamiento
+    try:
+        if (
+            (schema == "STAMMDATEN")
+            or tabla == "CA_SLT_FAHRZEUG_FILTER"
+            and schema == "CARPORT"
+        ):
+            objects = client.list_objects(
+                bucket_name, prefix=prefix + "/" + tabla, recursive=recursive
+            )
+        else:
+            objects = client.list_objects(
+                bucket_name,
+                prefix=prefix + "/" + tabla + "/DAPC_YEAR=" + str(year),
+                #+ "/DAPC_MONTH=" + str(month),   
+                recursive=recursive,
+            )
+        #comentar / descomentar  "/DAPC_MONTH=" + str(month) linea anterior para cgargas por mes o año y mes 
+
+        engine = snowflake_con("your_schema")
+
+        filestart = schema + "/" + tabla
+
+        parametros = {"schema": schema, "nametable": tabla}
+        execute_query_by_name("defaultdatabase", parametros, engine, "minicode.sql")
+
+        # execute_query_by_name('createschema', parametros,engine)
+        execute_query_by_name("createcontrol", parametros, engine, "minicode.sql")
+
+        # execute_query_by_name('createformat', parametros,engine)
+        # Primera carga all datat
+        if (
+            int(execute_query_by_name("firstload", parametros, engine, "minicode.sql"))
+            == 0
+        ):
+            for obj in objects:
+                name = obj.object_name
+                print(name)
+                if (
+                    (obj.object_name).endswith(".parquet")
+                    and (
+                        ((obj.object_name).startswith(filestart + "/DAPC_LADEDATUM"))
+                        or ((obj.object_name).startswith(filestart + "/folder_"))
+                        or (
+                            (obj.object_name).startswith(filestart + "/DAPC_YEAR")
+                            and devolver_year(name) == year
+                            #and devolver_mes(name) == month  #descomentar si se quiere hacer carga por año y mes
+                        )
+                    )
+                    and not (obj.object_name).endswith("checkpoint.parquet")
+                ):
+                    object_name = obj.object_name
+                    processwritesnowflake(
+                        object_name, client, bucket_name, engine, tabla, 1
+                    )
+        # Carga incremental
+        else:
+            for obj in objects:
+                name = obj.object_name
+                print(name)
+                if (
+                    (obj.object_name).endswith(".parquet")
+                    and (
+                        ((obj.object_name).startswith(filestart + "/DAPC_LADEDATUM"))
+                        or ((obj.object_name).startswith(filestart + "/folder_"))
+                        or (
+                            (obj.object_name).startswith(filestart + "/DAPC_YEAR")
+                            and devolver_year(name) == year
+                            #and devolver_mes(name) == month  #comentar / descomentar si se quiere hacer carga por año y mes
                         )
                     )
                     and not (obj.object_name).endswith("checkpoint.parquet")
